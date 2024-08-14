@@ -30,7 +30,10 @@ pub fn development_genesis_transactions() -> Vec<Transaction> {
 
     genesis_transactions.extend([
         // Money Transactions
-        Coin::<0>::mint(100, Sr25519Signature::new(SHAWN_PUB_KEY_BYTES)),
+        Coin::<0>::mint(200, Sr25519Signature::new(SHAWN_PUB_KEY_BYTES)),
+        Coin::<1>::mint(300, Sr25519Signature::new(SHAWN_PUB_KEY_BYTES)),
+        Coin::<2>::mint(400, Sr25519Signature::new(SHAWN_PUB_KEY_BYTES)),
+
         Coin::<0>::mint(100, ThresholdMultiSignature::new(1, signatories)),
         // Kitty Transactions
         KittyData::mint(Parent::mom(), b"mother", UpForGrabs),

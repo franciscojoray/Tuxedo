@@ -285,7 +285,17 @@ async fn apply_transaction<F: Fn(&OuterVerifier) -> bool, C: ConstraintChecker>(
         match output.payload.type_id {
             Coin::<0>::TYPE_ID => {
                 if filter(&output.verifier) {
-                    crate::money::apply_transaction(db, tx_hash, index as u32, output)?;
+                    crate::money::apply_transaction::<0>(db, tx_hash, index as u32, output)?;
+                }
+            }
+            Coin::<1>::TYPE_ID => {
+                if filter(&output.verifier) {
+                    crate::money::apply_transaction::<1>(db, tx_hash, index as u32, output)?;
+                }
+            }
+            Coin::<2>::TYPE_ID => {
+                if filter(&output.verifier) {
+                    crate::money::apply_transaction::<2>(db, tx_hash, index as u32, output)?;
                 }
             }
             Timestamp::TYPE_ID => {
@@ -305,14 +315,14 @@ async fn apply_transaction<F: Fn(&OuterVerifier) -> bool, C: ConstraintChecker>(
 }
 
 /// Add a new output to the database updating all tables.
-pub(crate) fn add_unspent_output(
+pub(crate) fn add_unspent_output<const ID: u8>(
     db: &Db,
     output_ref: &OutputRef,
     owner_pubkey: &H256,
     amount: &u128,
 ) -> anyhow::Result<()> {
     let unspent_tree = db.open_tree(UNSPENT)?;
-    unspent_tree.insert(output_ref.encode(), (owner_pubkey, amount).encode())?;
+    unspent_tree.insert(output_ref.encode(), (owner_pubkey, amount, ID).encode())?;
 
     Ok(())
 }
@@ -455,19 +465,21 @@ pub(crate) fn print_unspent_tree(db: &Db) -> anyhow::Result<()> {
 
 /// Iterate the entire unspent set summing the values of the coins
 /// on a per-address basis.
-pub(crate) fn get_balances(db: &Db) -> anyhow::Result<impl Iterator<Item = (H256, u128)>> {
+pub(crate) fn get_balances<const ID: u8>(db: &Db) -> anyhow::Result<impl Iterator<Item = (H256, u128)>> {
     let mut balances = std::collections::HashMap::<H256, u128>::new();
 
     let wallet_unspent_tree = db.open_tree(UNSPENT)?;
 
     for raw_data in wallet_unspent_tree.iter() {
         let (_output_ref_ivec, owner_amount_ivec) = raw_data?;
-        let (owner, amount) = <(H256, u128)>::decode(&mut &owner_amount_ivec[..])?;
+        let (owner, amount, id) = <(H256, u128, u8)>::decode(&mut &owner_amount_ivec[..])?;
 
-        balances
-            .entry(owner)
-            .and_modify(|old| *old += amount)
-            .or_insert(amount);
+        if id==ID {
+            balances
+                .entry(owner)
+                .and_modify(|old| *old += amount)
+                .or_insert(amount);
+        }
     }
 
     Ok(balances.into_iter())

@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
 
             // Print the details from storage
             let (coin_from_storage, verifier_from_storage) =
-                money::get_coin_from_storage(&output_ref, &client).await?;
+                money::get_coin_from_storage::<0>(&output_ref, &client).await?;
             print!("Found in storage.  Value: {}, ", coin_from_storage.0);
             pretty_print_verifier(&verifier_from_storage);
 
@@ -174,14 +174,30 @@ async fn main() -> anyhow::Result<()> {
         }
         Some(Command::ShowBalance) => {
             println!("Balance Summary");
-            let mut total = 0;
-            let balances = sync::get_balances(&db)?;
-            for (account, balance) in balances {
-                total += balance;
+            let mut total0 = 0;
+            let mut total1 = 0;
+            let mut total2 = 0;
+            let balances0 = sync::get_balances::<0>(&db)?;
+            let balances1 = sync::get_balances::<1>(&db)?;
+            let balances2 = sync::get_balances::<2>(&db)?;
+            for (account, balance) in balances0 {
+                total0 += balance;
                 println!("{account}: {balance}");
             }
             println!("--------------------");
-            println!("total      : {total}");
+            
+            for (account, balance) in balances1 {
+                total1 += balance;
+                println!("{account}: [asset1: {balance}]");
+            }
+            println!("--------------------");
+            
+            for (account, balance) in balances2 {
+                total2 += balance;
+                println!("{account}: [asset2: {balance}]");
+            }
+            println!("--------------------");
+            println!("total      : [{total0}, asset1: {total1}, asset2: {total2}]");
 
             Ok(())
         }

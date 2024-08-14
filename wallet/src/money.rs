@@ -149,7 +149,7 @@ pub async fn spend_coins_helper<Checker: ConstraintChecker + From<OuterConstrain
     // Make sure each input decodes and is still present in the node's storage,
     // and then push to transaction.
     for output_ref in &all_input_refs {
-        get_coin_from_storage(output_ref, client).await?;
+        get_coin_from_storage::<0>(output_ref, client).await?;
         transaction.inputs.push(Input {
             output_ref: output_ref.clone(),
             redeemer: Default::default(), // We will sign the total transaction so this should be empty
@@ -216,29 +216,29 @@ pub async fn spend_coins_helper<Checker: ConstraintChecker + From<OuterConstrain
 
 /// Given an output ref, fetch the details about this coin from the node's
 /// storage.
-pub async fn get_coin_from_storage(
+pub async fn get_coin_from_storage<const ID: u8>(
     output_ref: &OutputRef,
     client: &HttpClient,
-) -> anyhow::Result<(Coin<0>, OuterVerifier)> {
+) -> anyhow::Result<(Coin<ID>, OuterVerifier)> {
     let utxo = fetch_storage::<OuterVerifier>(output_ref, client).await?;
-    let coin_in_storage: Coin<0> = utxo.payload.extract()?;
+    let coin_in_storage: Coin<ID> = utxo.payload.extract()?;
 
     Ok((coin_in_storage, utxo.verifier))
 }
 
 /// Apply a transaction to the local database, storing the new coins.
-pub(crate) fn apply_transaction(
+pub(crate) fn apply_transaction<const ID: u8>(
     db: &Db,
     tx_hash: <BlakeTwo256 as Hash>::Output,
     index: u32,
     output: &Output<OuterVerifier>,
 ) -> anyhow::Result<()> {
-    let amount = output.payload.extract::<Coin<0>>()?.0;
+    let amount = output.payload.extract::<Coin<ID>>()?.0;
     let output_ref = OutputRef { tx_hash, index };
     match output.verifier {
         OuterVerifier::Sr25519Signature(Sr25519Signature { owner_pubkey }) => {
             // Add it to the global unspent_outputs table
-            crate::sync::add_unspent_output(db, &output_ref, &owner_pubkey, &amount)
+            crate::sync::add_unspent_output::<ID>(db, &output_ref, &owner_pubkey, &amount)
         }
         _ => Err(anyhow!("{:?}", ())),
     }

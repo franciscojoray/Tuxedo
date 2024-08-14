@@ -140,6 +140,10 @@ impl timestamp::TimestampConfig for Runtime {
 pub enum OuterConstraintChecker {
     /// Checks monetary transactions in a basic fungible cryptocurrency
     Money(money::MoneyConstraintChecker<0>),
+
+    Asset1(money::MoneyConstraintChecker<1>),
+    
+    Asset2(money::MoneyConstraintChecker<2>),
     /// Checks Free Kitty transactions
     FreeKittyConstraintChecker(kitties::FreeKittyConstraintChecker),
     /// Checks that an amoeba can split into two new amoebas
